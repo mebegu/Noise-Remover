@@ -169,7 +169,7 @@ __global__ void compute1_shared(float *north_deriv, float *south_deriv, float *w
     int locali = threadIdx.y;
     int localj = threadIdx.x;
     long k = i * width + j;
-    local_image[i][j] = image[k];
+    local_image[locali][localj] = image[k];
     __syncthreads();
     //End of shared data load
     /*int _locali = threadIdx.y + 1;
