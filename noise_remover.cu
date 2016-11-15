@@ -31,16 +31,16 @@ double get_time() {
   return( ((double)TV.tv_sec) + kMicro * ((double)TV.tv_usec) );
 }
 
-__global__ void sumArray(float *out, unsigned char *in, int size) {
+__global__ void sumArray(double *out, unsigned char *in, int size) {
   //if (blockIdx.x <= blockNum ) {
-  extern __shared__ float sdata[];
+  extern __shared__ double sdata[];
 
   int index = threadIdx.x + blockDim.x * blockIdx.x;
   int tid  = threadIdx.x;
 
   // load shared mem from global mem
   if (index < size)
-    sdata[tid] = (float) in[index];
+    sdata[tid] = (double) in[index];
   else
     sdata[tid] = 0;
   __syncthreads(); // make sure entire block is loaded!
@@ -59,16 +59,16 @@ __global__ void sumArray(float *out, unsigned char *in, int size) {
 
 }
 
-__global__ void sum2Array(float *out, unsigned char *in, int size) {
+__global__ void sum2Array(double *out, unsigned char *in, int size) {
   //if (blockIdx.x <= blockNum ) {
-  extern __shared__ float sdata[];
+  extern __shared__ double sdata[];
 
   int myId = threadIdx.x + blockDim.x * blockIdx.x;
   int tid  = threadIdx.x;
 
   // load shared mem from global mem
   if (myId < size)
-    sdata[tid] = (float)in[myId] * (float)in[myId];
+    sdata[tid] = (double)in[myId] * (double)in[myId];
   else
     sdata[tid] = 0;
   __syncthreads(); // make sure entire block is loaded!
@@ -85,12 +85,12 @@ __global__ void sum2Array(float *out, unsigned char *in, int size) {
     out[blockIdx.x] = sdata[0];
   }
 }
-//__global__ void naiveSum(float *dsums,
+//__global__ void naiveSum(double *dsums,
 
 /*Parallel computation of compute 1*/
-__global__ void compute1(float *north_deriv, float *south_deriv, float *west_deriv,
-			 float *east_deriv, float *diff_coef,
-			 unsigned char *image, int width, int height, float std_dev)
+__global__ void compute1(double *north_deriv, double *south_deriv, double *west_deriv,
+			 double *east_deriv, double *diff_coef,
+			 unsigned char *image, int width, int height, double std_dev)
 {
   int j = blockDim.x * blockIdx.x + threadIdx.x;
   int i = blockDim.y * blockIdx.y + threadIdx.y;
@@ -98,20 +98,20 @@ __global__ void compute1(float *north_deriv, float *south_deriv, float *west_der
   if (i >= 1 && j >= 1 && j < width-1 && i < height-1) {
     int k = i * width + j;
     unsigned char currentPixel = image[k]; //Register for current pixel
-    float ndk, sdk, wdk, edk; //Registers for derivatives
-    float coef; //Register for diff coefficient
-    float laplacian, num, den, std_dev2, gradient_square;
-    ndk = image[(i - 1) * width + j] - currentPixel;	// north derivative --- 1 floating point arithmetic operations
-    sdk = image[(i + 1) * width + j] - currentPixel;	// south derivative --- 1 floating point arithmetic operations
-    wdk = image[i * width + (j - 1)] - currentPixel; // west derivative --- 1 floating point arithmetic operations
-    edk = image[i * width + (j + 1)] - currentPixel;	   // east derivative --- 1 floating point arithmetic operations
+    double ndk, sdk, wdk, edk; //Registers for derivatives
+    double coef; //Register for diff coefficient
+    double laplacian, num, den, std_dev2, gradient_square;
+    ndk = image[(i - 1) * width + j] - currentPixel;	// north derivative --- 1 doubleing point arithmetic operations
+    sdk = image[(i + 1) * width + j] - currentPixel;	// south derivative --- 1 doubleing point arithmetic operations
+    wdk = image[i * width + (j - 1)] - currentPixel; // west derivative --- 1 doubleing point arithmetic operations
+    edk = image[i * width + (j + 1)] - currentPixel;	   // east derivative --- 1 doubleing point arithmetic operations
     gradient_square = (ndk * ndk + sdk * sdk + wdk * wdk + edk * edk) / (currentPixel * currentPixel);
-    laplacian = (ndk + sdk + wdk + edk) / currentPixel; // 4 floating point arithmetic operations
-    num = (0.5 * gradient_square) - ((1.0 / 16.0) * (laplacian * laplacian)); // 5 floating point arithmetic operations
-    den = 1 + (.25 * laplacian); // 2 floating point arithmetic operations
-    std_dev2 = num / (den * den); // 2 floating point arithmetic operations
-    den = (std_dev2 - std_dev) / (std_dev * (1 + std_dev)); // 4 floating point arithmetic operations
-    coef = 1.0 / (1.0 + den); // 2 floating point arithmetic operations -
+    laplacian = (ndk + sdk + wdk + edk) / currentPixel; // 4 doubleing point arithmetic operations
+    num = (0.5 * gradient_square) - ((1.0 / 16.0) * (laplacian * laplacian)); // 5 doubleing point arithmetic operations
+    den = 1 + (.25 * laplacian); // 2 doubleing point arithmetic operations
+    std_dev2 = num / (den * den); // 2 doubleing point arithmetic operations
+    den = (std_dev2 - std_dev) / (std_dev * (1 + std_dev)); // 4 doubleing point arithmetic operations
+    coef = 1.0 / (1.0 + den); // 2 doubleing point arithmetic operations -
     if (coef < 0) {
       diff_coef[k] = 0;
     } else if (coef > 1) {
@@ -156,9 +156,9 @@ __global__ void compute1(float *north_deriv, float *south_deriv, float *west_der
   else if (locali == 1) {
   local_image[locali-1][localj] = image[k-width];
   }*/
-__global__ void compute1_shared(float *north_deriv, float *south_deriv, float *west_deriv,
-				float *east_deriv, float *diff_coef, unsigned char *image,
-				int width, int height, float std_dev)
+__global__ void compute1_shared(double *north_deriv, double *south_deriv, double *west_deriv,
+				double *east_deriv, double *diff_coef, unsigned char *image,
+				int width, int height, double std_dev)
 {
   //extern  __shared__ unsigned char local_image[];
   __shared__ unsigned char local_image[18][18];
@@ -179,9 +179,9 @@ __global__ void compute1_shared(float *north_deriv, float *south_deriv, float *w
     int _k = _i * width + _j;*/
     if(locali > 0 && localj > 0 && j <  blockDim.x-1  && i <  blockDim.y-1){
       unsigned char currentPixel = local_image[locali][localj];
-      float ndk, sdk, wdk, edk;
-      float coef;
-      float laplacian, num, den, std_dev2, gradient_square;
+      double ndk, sdk, wdk, edk;
+      double coef;
+      double laplacian, num, den, std_dev2, gradient_square;
       /*ndk = local_image[(locali-1) * localWidth + localj] - currentPixel;
       sdk = local_image[(locali+1) * localWidth + localj] - currentPixel;
       wdk = local_image[locali * localWidth + localj - 1] - currentPixel;
@@ -191,12 +191,12 @@ __global__ void compute1_shared(float *north_deriv, float *south_deriv, float *w
       wdk = local_image[locali][localj-1] - currentPixel;
       edk = local_image[locali][localj+1] - currentPixel;
       gradient_square = (ndk * ndk + sdk * sdk + wdk * wdk + edk * edk) / (currentPixel * currentPixel);
-      laplacian = (ndk + sdk + wdk + edk) / currentPixel; // 4 floating point arithmetic operations
-      num = (0.5 * gradient_square) - ((1.0 / 16.0) * (laplacian * laplacian)); // 5 floating point arithmetic operations
-      den = 1 + (.25 * laplacian); // 2 floating point arithmetic operations
-      std_dev2 = num / (den * den); // 2 floating point arithmetic operations
-      den = (std_dev2 - std_dev) / (std_dev * (1 + std_dev)); // 4 floating point arithmetic operations
-      coef = 1.0 / (1.0 + den); // 2 floating point arithmetic operations
+      laplacian = (ndk + sdk + wdk + edk) / currentPixel; // 4 doubleing point arithmetic operations
+      num = (0.5 * gradient_square) - ((1.0 / 16.0) * (laplacian * laplacian)); // 5 doubleing point arithmetic operations
+      den = 1 + (.25 * laplacian); // 2 doubleing point arithmetic operations
+      std_dev2 = num / (den * den); // 2 doubleing point arithmetic operations
+      den = (std_dev2 - std_dev) / (std_dev * (1 + std_dev)); // 4 doubleing point arithmetic operations
+      coef = 1.0 / (1.0 + den); // 2 doubleing point arithmetic operations
       if (coef < 0) {
         diff_coef[k] = 0;
       } else if (coef > 1) {
@@ -211,30 +211,30 @@ __global__ void compute1_shared(float *north_deriv, float *south_deriv, float *w
 
 }
 
-__global__ void compute2(float *north_deriv, float *south_deriv,
-			 float *west_deriv, float *east_deriv, float *diff_coef,
-			 unsigned char *image, int width, int height, float lambda)
+__global__ void compute2(double *north_deriv, double *south_deriv,
+			 double *west_deriv, double *east_deriv, double *diff_coef,
+			 unsigned char *image, int width, int height, double lambda)
 {
   int j = blockDim.x * blockIdx.x + threadIdx.x;
   int i = blockDim.y * blockIdx.y + threadIdx.y;
   if (i >= 1 && j >= 1 && j < width-1 && i < height-1) {
     int k = i * width + j;
-    float diff_coef_north, diff_coef_west, diff_coef_east, diff_coef_south, divergence;
+    double diff_coef_north, diff_coef_west, diff_coef_east, diff_coef_south, divergence;
     diff_coef_north = diff_coef[k];    // north diffusion coefficient
     diff_coef_south = diff_coef[k + width];	// south diffusion coefficient
     diff_coef_west = diff_coef_north;	// west diffusion coefficient
     diff_coef_east = diff_coef[k + 1]; // east diffusion coefficient
-    divergence = diff_coef_north * north_deriv[k] + diff_coef_south * south_deriv[k] + diff_coef_west * west_deriv[k] + diff_coef_east * east_deriv[k]; // --- 7 floating point arithmetic operations
-    image[k] = image[k] + 0.25 * lambda * divergence; // --- 3 floating point arithmetic operations
+    divergence = diff_coef_north * north_deriv[k] + diff_coef_south * south_deriv[k] + diff_coef_west * west_deriv[k] + diff_coef_east * east_deriv[k]; // --- 7 doubleing point arithmetic operations
+    image[k] = image[k] + 0.25 * lambda * divergence; // --- 3 doubleing point arithmetic operations
   }
 }
 
-__global__ void compute2_shared(float *north_deriv, float *south_deriv,
-				float *west_deriv, float *east_deriv, float *diff_coef,
-				unsigned char *image, int width, int height, float lambda)
+__global__ void compute2_shared(double *north_deriv, double *south_deriv,
+				double *west_deriv, double *east_deriv, double *diff_coef,
+				unsigned char *image, int width, int height, double lambda)
 {
-  //float local_diff_coef[];
-  __shared__ float local_diff_coef[18][18];
+  //double local_diff_coef[];
+  __shared__ double local_diff_coef[18][18];
   int j = blockDim.x * blockIdx.x + threadIdx.x;
   int i = blockDim.y * blockIdx.y + threadIdx.y;
   if (j < width && i < height) {
@@ -260,12 +260,12 @@ __global__ void compute2_shared(float *north_deriv, float *south_deriv,
     int _locali = blockIdx.y;
     int _localj = blockIdx.x;*/
     if(locali > 0 && localj > 0 && j <  blockDim.x-1  && i <  blockDim.y-1){
-      float diff_coef_north, diff_coef_west, diff_coef_east, diff_coef_south, divergence;
+      double diff_coef_north, diff_coef_west, diff_coef_east, diff_coef_south, divergence;
       diff_coef_north = local_diff_coef[locali][localj];
       diff_coef_south = local_diff_coef[locali+1][localj];
       diff_coef_west = diff_coef_north;
       diff_coef_east = local_diff_coef[locali][localj+1];
-      divergence = diff_coef_north * north_deriv[k] + diff_coef_south * south_deriv[k] + diff_coef_west * west_deriv[k] + diff_coef_east * east_deriv[k]; // --- 7 floating point arithmetic operations
+      divergence = diff_coef_north * north_deriv[k] + diff_coef_south * south_deriv[k] + diff_coef_west * west_deriv[k] + diff_coef_east * east_deriv[k]; // --- 7 doubleing point arithmetic operations
       image[k] = image[k] * 0.25 * lambda * divergence;
     }
   }
@@ -279,9 +279,9 @@ int main(int argc, char *argv[]) {
   const char *outputname = "output.png";
   int width, height, pixelWidth, n_pixels;
   int n_iter = 50;
-  float lambda = 0.5;
-  float mean, variance, std_dev;  //local region statistics
-  float sum, sum2;	// calculation variables
+  double lambda = 0.5;
+  double mean, variance, std_dev;  //local region statistics
+  double sum, sum2;	// calculation variables
   time_1 = get_time();
 
   if(argc<2) {
@@ -323,22 +323,22 @@ int main(int argc, char *argv[]) {
   //Data for reduction
   int threads = 1024;
   int blocks = n_pixels / threads;
-  float *dimage, *doutput, *d2output;
-  float *houtput = (float *)malloc(sizeof(float) * blocks);
-  float *h2output = (float *) malloc(sizeof(float) * blocks);
+  double *dimage, *doutput, *d2output;
+  double *houtput = (double *)malloc(sizeof(double) * blocks);
+  double *h2output = (double *) malloc(sizeof(double) * blocks);
   cudaDeviceReset();
-  cudaMalloc(&dimage, sizeof(float) * n_pixels);
-  cudaMalloc(&doutput, sizeof(float) * blocks);
-  cudaMalloc(&d2output, sizeof(float) * blocks);
+  cudaMalloc(&dimage, sizeof(double) * n_pixels);
+  cudaMalloc(&doutput, sizeof(double) * blocks);
+  cudaMalloc(&d2output, sizeof(double) * blocks);
   //Data for computes
-  float *dnorth_deriv, *dsouth_deriv, *dwest_deriv, *deast_deriv, *ddiff_coefs;
+  double *dnorth_deriv, *dsouth_deriv, *dwest_deriv, *deast_deriv, *ddiff_coefs;
   unsigned char *dimage_uchar;
   cudaMalloc(&dimage_uchar, sizeof(unsigned char) * n_pixels);
-  cudaMalloc(&dnorth_deriv, sizeof(float) * n_pixels);
-  cudaMalloc(&dsouth_deriv, sizeof(float) * n_pixels);
-  cudaMalloc(&dwest_deriv, sizeof(float) * n_pixels);
-  cudaMalloc(&deast_deriv, sizeof(float) * n_pixels);
-  cudaMalloc(&ddiff_coefs, sizeof(float) * n_pixels);
+  cudaMalloc(&dnorth_deriv, sizeof(double) * n_pixels);
+  cudaMalloc(&dsouth_deriv, sizeof(double) * n_pixels);
+  cudaMalloc(&dwest_deriv, sizeof(double) * n_pixels);
+  cudaMalloc(&deast_deriv, sizeof(double) * n_pixels);
+  cudaMalloc(&ddiff_coefs, sizeof(double) * n_pixels);
   cudaMemcpy(dimage_uchar, image, n_pixels * sizeof(unsigned char), cudaMemcpyHostToDevice);
   dim3 threadsPerBlock(18, 18, 1);
   dim3 blockPerGrid(width / threadsPerBlock.x, height / threadsPerBlock.y, 1);
@@ -347,19 +347,19 @@ int main(int argc, char *argv[]) {
   time_4 = get_time();
   for (int iter = 0; iter < n_iter; ++iter) {
     //Reduction
-    sumArray<<<blocks, threads, sizeof(float) * threads>>>(doutput, dimage_uchar, n_pixels);
-    sum2Array<<<blocks, threads, sizeof(float) * threads>>>(d2output, dimage_uchar, n_pixels);
+    sumArray<<<blocks, threads, sizeof(double) * threads>>>(doutput, dimage_uchar, n_pixels);
+    sum2Array<<<blocks, threads, sizeof(double) * threads>>>(d2output, dimage_uchar, n_pixels);
     cudaDeviceSynchronize();
-    cudaMemcpy(houtput, doutput, sizeof(float) * blocks, cudaMemcpyDeviceToHost);
-    cudaMemcpy(h2output, d2output, sizeof(float) * blocks, cudaMemcpyDeviceToHost);
+    cudaMemcpy(houtput, doutput, sizeof(double) * blocks, cudaMemcpyDeviceToHost);
+    cudaMemcpy(h2output, d2output, sizeof(double) * blocks, cudaMemcpyDeviceToHost);
     sum = sum2 = 0;
     for (int i = 0; i < blocks; i++) {
       sum += houtput[i];
       sum2 += h2output[i];
     }
-    mean = sum / n_pixels; // --- 1 floating point arithmetic operations
-    variance = (sum2 / n_pixels) - mean * mean; // --- 3 floating point arithmetic operations
-    std_dev = variance / (mean * mean); // --- 2 floating point arithmetic operations
+    mean = sum / n_pixels; // --- 1 doubleing point arithmetic operations
+    variance = (sum2 / n_pixels) - mean * mean; // --- 3 doubleing point arithmetic operations
+    std_dev = variance / (mean * mean); // --- 2 doubleing point arithmetic operations
 
     //Compute 1
     /*compute1<<<blockPerGrid, threadsPerBlock>>>(dnorth_deriv, dsouth_deriv, dwest_deriv, deast_deriv,
@@ -405,7 +405,7 @@ int main(int argc, char *argv[]) {
   }
   test /= n_pixels;
 
-  float gflops = (float) (n_iter * 1E-9 * (3 * height * width + 42 * (height-1) * (width-1) + 6)) / (time_5 - time_4);
+  double gflops = (double) (n_iter * 1E-9 * (3 * height * width + 42 * (height-1) * (width-1) + 6)) / (time_5 - time_4);
   time_7 = get_time();
 
   // Part VIII: deallocate variables
