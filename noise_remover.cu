@@ -234,7 +234,7 @@ __global__ void compute2_shared(float *north_deriv, float *south_deriv,
 				unsigned char *image, int width, int height, float lambda)
 {
   //float local_diff_coef[];
-  float local_diff_coef[18][18];
+  __shared__ float local_diff_coef[18][18];
   int j = blockDim.x * blockIdx.x + threadIdx.x;
   int i = blockDim.y * blockIdx.y + threadIdx.y;
   if (j < width && i < height) {
