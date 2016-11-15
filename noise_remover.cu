@@ -165,7 +165,7 @@ __global__ void compute1_shared(float *north_deriv, float *south_deriv, float *w
   int j = blockDim.x * blockIdx.x + threadIdx.x;
   int i = blockDim.y * blockIdx.y + threadIdx.y;
 
-  if (i > 0 && j > 0 && j < width-1 && i < height--) {
+  if (j < width && i < height) {
     int locali = threadIdx.y;
     int localj = threadIdx.x;
     long k = i * width + j;
@@ -237,7 +237,7 @@ __global__ void compute2_shared(float *north_deriv, float *south_deriv,
   float local_diff_coef[18][18];
   int j = blockDim.x * blockIdx.x + threadIdx.x;
   int i = blockDim.y * blockIdx.y + threadIdx.y;
-  if (i >= 1 && j >= 1 && j < width-1 && i < height-1) {
+  if (j < width && i < height) {
     int k = i * width + j;
   /*  int locali = blockIdx.y;
     int localj = blockIdx.x;*/
@@ -259,13 +259,15 @@ __global__ void compute2_shared(float *north_deriv, float *south_deriv,
     int _k = _i * width + _j;
     int _locali = blockIdx.y;
     int _localj = blockIdx.x;*/
-    float diff_coef_north, diff_coef_west, diff_coef_east, diff_coef_south, divergence;
-    diff_coef_north = local_diff_coef[locali][localj];
-    diff_coef_south = local_diff_coef[locali+1][localj];
-    diff_coef_west = diff_coef_north;
-    diff_coef_east = local_diff_coef[locali][localj+1];
-    divergence = diff_coef_north * north_deriv[k] + diff_coef_south * south_deriv[k] + diff_coef_west * west_deriv[k] + diff_coef_east * east_deriv[k]; // --- 7 floating point arithmetic operations
-    image[k] = image[k] * 0.25 * lambda * divergence;
+    if(locali > 0 && localj > 0 && j <  blockDim.x-1  && i <  blockDim.y-1){
+      float diff_coef_north, diff_coef_west, diff_coef_east, diff_coef_south, divergence;
+      diff_coef_north = local_diff_coef[locali][localj];
+      diff_coef_south = local_diff_coef[locali+1][localj];
+      diff_coef_west = diff_coef_north;
+      diff_coef_east = local_diff_coef[locali][localj+1];
+      divergence = diff_coef_north * north_deriv[k] + diff_coef_south * south_deriv[k] + diff_coef_west * west_deriv[k] + diff_coef_east * east_deriv[k]; // --- 7 floating point arithmetic operations
+      image[k] = image[k] * 0.25 * lambda * divergence;
+    }
   }
 }
 
